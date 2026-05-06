@@ -4,7 +4,6 @@ import { db, collection, addDoc, updateDoc, doc, handleFirestoreError, Operation
 import { Priority, Task } from '../types';
 import { Plus, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import VoiceRecorder from './VoiceRecorder';
 
 interface TaskFormProps {
   onClose?: () => void;
@@ -63,21 +62,14 @@ export default function TaskForm({ onClose, task }: TaskFormProps) {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
         <label className="block text-sm font-medium text-zinc-700 mb-1">Titre</label>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Ex: Appeler le fournisseur..."
-            className="input w-full"
-            required
-          />
-          <VoiceRecorder onTranscription={(result) => {
-            setTitle(prev => (prev ? prev + ' ' + result.title : result.title));
-            if (result.priority) setPriority(result.priority);
-            if (result.category) setCategory(result.category);
-          }} />
-        </div>
+        <input
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Ex: Appeler le fournisseur..."
+          className="input w-full"
+          required
+        />
       </div>
       <div>
         <label className="block text-sm font-medium text-zinc-700 mb-1">Catégorie</label>
