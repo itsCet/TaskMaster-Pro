@@ -1,0 +1,77 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(ownerId) {
+      return isSignedIn() && request.auth.uid == ownerId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- Task Validation ---
+    function isValidTask(data) {
+      return data.keys().hasAll(['title', 'priority', 'status', 'createdAt', 'ownerId']) &&
+             data.keys().size() >= 5 && data.keys().size() <= 10 &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+             data.priority in ['low', 'medium', 'high', 'urgent'] &&
+             data.status in ['pending', 'completed'] &&
+             data.createdAt is timestamp &&
+             (data.get('dueDate', null) == null || data.dueDate is timestamp) &&
+             (data.get('completedAt', null) == null || data.completedAt is timestamp) &&
+             (data.get('description', null) == null || (data.description is string && data.description.size() <= 1000)) &&
+             (data.get('category', null) == null || (data.category is string && data.category.size() <= 50)) &&
+             data.ownerId == request.auth.uid;
+    }
+
+    // --- Collections ---
+    match /tasks/{taskId} {
+      allow create: if isSignedIn() && 
+                      isValidId(taskId) &&
+                      isValidTask(incoming()) &&
+                      incoming().createdAt == request.time &&
+                      incoming().status == 'pending';
+
+      allow get: if isOwner(existing().ownerId);
+
+      allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+
+      allow update: if isOwner(existing().ownerId) &&
+                      isValidTask(incoming()) &&
+                      incoming().ownerId == existing().ownerId &&
+                      incoming().createdAt == existing().createdAt &&
+                      (
+                        // Action: Update Title/Description/Priority/DueDate/Category
+                        (incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'priority', 'dueDate', 'category'])) ||
+                        // Action: Mark Completed
+                        (incoming().diff(existing()).affectedKeys().hasOnly(['status', 'completedAt']) && 
+                         incoming().status == 'completed' && 
+                         incoming().completedAt == request.time) ||
+                        // Action: Mark Pending
+                        (incoming().diff(existing()).affectedKeys().hasOnly(['status', 'completedAt']) && 
+                         incoming().status == 'pending' && 
+                         incoming().completedAt == null)
+                      );
+
+      allow delete: if isOwner(existing().ownerId);
+    }
+  }
+}

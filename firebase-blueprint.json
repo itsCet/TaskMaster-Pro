@@ -1,0 +1,36 @@
+{
+  "entities": {
+    "Task": {
+      "title": "Task",
+      "description": "A single task in the task management system",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "The unique ID of the task" },
+        "title": { "type": "string", "description": "The title of the task" },
+        "description": { "type": "string", "description": "Detailed description of the task" },
+        "priority": { 
+          "type": "string", 
+          "enum": ["low", "medium", "high", "urgent"],
+          "description": "Urgency level of the task" 
+        },
+        "status": { 
+          "type": "string", 
+          "enum": ["pending", "completed"],
+          "description": "Current status of the task" 
+        },
+        "dueDate": { "type": "string", "format": "date-time", "description": "When the task is due" },
+        "completedAt": { "type": "string", "format": "date-time", "description": "When the task was completed" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When the task was created" },
+        "category": { "type": "string", "description": "Category of the task" },
+        "ownerId": { "type": "string", "description": "UID of the user who owns the task" }
+      },
+      "required": ["title", "priority", "status", "createdAt", "ownerId"]
+    }
+  },
+  "firestore": {
+    "tasks": {
+      "schema": "Task",
+      "description": "Collection of tasks"
+    }
+  }
+}

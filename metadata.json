@@ -1,0 +1,6 @@
+{
+  "name": "TaskMaster Pro",
+  "description": "Un gestionnaire de tâches professionnel avec suivi quotidien, priorisation par urgence et statistiques de productivité hebdomadaires.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": []
+}
