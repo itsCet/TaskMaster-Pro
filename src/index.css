@@ -1,34 +1,100 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
-@theme {
+/* ── Custom theme tokens ───────────────────────────────────────────────────── */
+:root {
+  --color-accent:       #18181b;
+  --color-accent-hover: #27272a;
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
-  --color-brand-primary: #111827;
-  --color-brand-secondary: #6b7280;
 }
 
+/* ── Base ──────────────────────────────────────────────────────────────────── */
 @layer base {
-  body {
-    @apply bg-zinc-50 text-brand-primary font-sans antialiased;
-  }
+  html { @apply antialiased; }
+  body { @apply bg-zinc-50 text-zinc-900 font-sans; }
 }
 
+/* ── Reusable components ───────────────────────────────────────────────────── */
 @layer components {
   .card {
-    @apply bg-white border border-zinc-200 rounded-2xl shadow-sm overflow-hidden dark:bg-zinc-800 dark:border-zinc-700;
+    @apply bg-white border border-zinc-200 rounded-2xl shadow-sm;
   }
-  
-  .btn-primary {
-    @apply px-4 py-2 bg-zinc-900 text-white rounded-lg font-medium transition-all hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200;
+  .card-hover {
+    @apply transition-all hover:shadow-md hover:border-zinc-300;
   }
-  
+
+  /* Accent-aware button */
+  .btn-accent {
+    @apply px-4 py-2 text-white text-sm font-semibold rounded-xl
+           transition-all active:scale-[0.97] shadow-sm;
+    background-color: var(--color-accent);
+  }
+  .btn-accent:hover { background-color: var(--color-accent-hover); }
+
   .btn-secondary {
-    @apply px-4 py-2 bg-white border border-zinc-200 text-zinc-700 rounded-lg font-medium transition-all hover:bg-zinc-50 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-700;
+    @apply px-4 py-2 bg-white border border-zinc-200 text-zinc-700 text-sm
+           font-semibold rounded-xl transition-all hover:bg-zinc-50 active:scale-[0.97];
   }
-  
+
   .input {
-    @apply px-4 py-2 bg-white border border-zinc-200 rounded-lg outline-none transition-all focus:ring-2 focus:ring-zinc-900/5 focus:border-zinc-400 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-100;
+    @apply w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-xl text-sm
+           outline-none transition-all focus:border-zinc-400 focus:ring-2 focus:ring-zinc-900/5
+           placeholder:text-zinc-400;
+  }
+
+  /* Sidebar nav item */
+  .nav-item {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium
+           text-zinc-500 transition-all cursor-pointer select-none
+           hover:bg-zinc-100 hover:text-zinc-900;
+  }
+  .nav-item.active {
+    @apply text-white;
+    background-color: var(--color-accent);
+  }
+  .nav-item.active:hover {
+    background-color: var(--color-accent-hover);
+  }
+
+  /* XP Progress bar */
+  .xp-bar {
+    @apply h-2 rounded-full bg-zinc-100 overflow-hidden;
+  }
+  .xp-bar-fill {
+    @apply h-full rounded-full transition-all duration-700;
+    background: linear-gradient(90deg, var(--color-accent), color-mix(in srgb, var(--color-accent) 60%, white));
   }
 }
 
+/* ── Utility helpers ───────────────────────────────────────────────────────── */
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  .text-accent { color: var(--color-accent); }
+  .bg-accent   { background-color: var(--color-accent); }
+  .border-accent { border-color: var(--color-accent); }
+}
+
+/* ── Tasky avatar glow animation ───────────────────────────────────────────── */
+@keyframes tasky-glow {
+  0%, 100% { filter: drop-shadow(0 0 6px color-mix(in srgb, var(--color-accent) 40%, transparent)); }
+  50%       { filter: drop-shadow(0 0 18px color-mix(in srgb, var(--color-accent) 70%, transparent)); }
+}
+@keyframes tasky-float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-8px); }
+}
+@keyframes tasky-pulse-ring {
+  0%   { transform: scale(0.9); opacity: 1; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+.tasky-float   { animation: tasky-float 3s ease-in-out infinite; }
+.tasky-glow    { animation: tasky-glow  3s ease-in-out infinite; }
+.tasky-ring    { animation: tasky-pulse-ring 2s ease-out infinite; }
+
+/* ── Scrollbar ──────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar       { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 99px; }
