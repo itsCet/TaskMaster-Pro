@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   auth, db, collection, query, where, orderBy,
-  onSnapshot, signInWithPopup, googleProvider,
-  signOut, onAuthStateChanged, User,
+  onSnapshot, signInAnonymously, onAuthStateChanged, User,
   handleFirestoreError, OperationType, doc, serverTimestamp,
 } from './lib/firebase';
 import { Task, Theme } from './types';
@@ -20,7 +19,7 @@ import Stats        from './components/Stats';
 import CalendarView from './components/CalendarView';
 import TaskForm     from './components/TaskForm';
 
-import { CheckCircle2, Menu, X, Plus } from 'lucide-react';
+import { Menu, X, Plus } from 'lucide-react';
 import { writeBatch } from 'firebase/firestore';
 import { cn } from './lib/utils';
 
@@ -37,18 +36,24 @@ export default function App() {
   const [taskyName,      setTaskyName]     = useState('Tasky');
   const [showAddTask,    setShowAddTask]   = useState(false);
 
-  // ── Auth ──────────────────────────────────────────────────────────────────
-  const login = async () => {
-    try { await signInWithPopup(auth, googleProvider); }
-    catch (e) { console.error('Login failed', e); }
-  };
-  const logout = async () => {
-    try { await signOut(auth); }
-    catch (e) { console.error('Logout failed', e); }
-  };
+  // ── Auth anonyme automatique (pas de login requis) ───────────────────────
+  const logout = () => {}; // no-op — auth anonyme, pas de déconnexion
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, u => { setUser(u); setLoading(false); });
+    const unsub = onAuthStateChanged(auth, async u => {
+      if (u) {
+        setUser(u);
+        setLoading(false);
+      } else {
+        try {
+          await signInAnonymously(auth);
+          // onAuthStateChanged se redéclenche avec le nouvel utilisateur
+        } catch (e) {
+          console.error('Anonymous auth failed', e);
+          setLoading(false);
+        }
+      }
+    });
     return () => unsub();
   }, []);
 
@@ -104,80 +109,31 @@ export default function App() {
   // ── Tasky profile ─────────────────────────────────────────────────────────
   const taskyProfile = getTaskyProfile(tasks, taskyName);
 
-  // ── Loading / Login ───────────────────────────────────────────────────────
-  if (loading) {
+  // ── Écran de chargement (auth anonyme en cours) ──────────────────────────
+  if (loading || !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--paper)' }}>
-        {/* Loader style arcade — carré qui clignote */}
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4" style={{ background: 'var(--paper)' }}>
+        <div
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: '1.4rem',
+            color: 'var(--orange)',
+            letterSpacing: '0.05em',
+            textShadow: '2px 2px 0 var(--ink)',
+          }}
+        >
+          TASKMASTER
+        </div>
         <motion.div
           animate={{ opacity: [1, 0, 1] }}
-          transition={{ duration: 0.8, repeat: Infinity, ease: 'steps(1)' }}
+          transition={{ duration: 0.7, repeat: Infinity, ease: 'steps(1)' }}
           style={{
-            width: 24, height: 24,
+            width: 18, height: 18,
             background: 'var(--orange)',
             border: '2px solid var(--ink)',
             boxShadow: '3px 3px 0 var(--ink)',
           }}
         />
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6" style={{ background: 'var(--paper)' }}>
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="w-full max-w-sm text-center"
-        >
-          {/* Title card — style jaquette arcade */}
-          <motion.div
-            className="stamp-in mb-8 p-6 inline-block"
-            style={{
-              background:   'var(--orange)',
-              border:       'var(--r-border)',
-              borderRadius: 'var(--r-radius)',
-              boxShadow:    'var(--r-shadow-lg)',
-            }}
-          >
-            <p style={{ fontFamily: 'var(--font-display)', fontSize: '2.2rem', color: 'var(--paper-light)', letterSpacing: '0.03em', lineHeight: 1.1, textShadow: '3px 3px 0 var(--ink)' }}>
-              TASK<br/>MASTER
-            </p>
-            <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--paper-light)', letterSpacing: '0.18em', marginTop: '0.25rem', opacity: 0.85 }}>
-              ★ PRO EDITION ★
-            </p>
-          </motion.div>
-
-          <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.9rem', color: 'var(--ink-mid)', marginBottom: '0.25rem' }}>
-            Organise tes tâches. Fais évoluer Tasky.
-          </p>
-          <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: 'var(--ink-light)', marginBottom: '2rem' }}>
-            Insert coin to continue...
-          </p>
-
-          <button
-            onClick={login}
-            className="w-full btn-accent flex items-center justify-center gap-3 py-3.5 text-sm"
-          >
-            <img src="https://www.google.com/favicon.ico" className="w-4 h-4 invert" alt="" />
-            SE CONNECTER AVEC GOOGLE
-          </button>
-
-          {/* Feature tags rétro */}
-          <div className="flex flex-wrap justify-center gap-2 mt-8">
-            {[['★', 'Avatar qui évolue'], ['✓', 'Gestion de tâches'], ['◉', 'Statistiques'], ['▲', 'Thèmes']].map(([icon, label]) => (
-              <span
-                key={label}
-                className="retro-tag"
-                style={{ fontFamily: 'var(--font-mono)', fontSize: '0.6rem' }}
-              >
-                {icon} {label}
-              </span>
-            ))}
-          </div>
-        </motion.div>
       </div>
     );
   }

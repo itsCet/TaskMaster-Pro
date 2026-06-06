@@ -6,7 +6,7 @@ import { TaskyProfile, LEVEL_CONFIG } from '../types';
 import TaskyAvatar from './TaskyAvatar';
 import {
   Sparkles, ListTodo, User as UserIcon, Palette, Users, Settings2,
-  ChevronLeft, ChevronRight, LogOut, TrendingUp, CalendarDays,
+  ChevronLeft, ChevronRight, TrendingUp, CalendarDays,
 } from 'lucide-react';
 
 export type SidebarView = 'tasky' | 'tasks' | 'stats' | 'calendar' | 'profile' | 'style' | 'team' | 'settings';
@@ -196,44 +196,33 @@ export default function Sidebar({ user, view, onView, onLogout, taskyProfile, co
       {/* ── Footer utilisateur ──────────────────────────────────────────── */}
       <div className="px-2 pb-3 pt-2" style={{ borderTop: 'var(--r-border)' }}>
         <div className="flex items-center gap-2.5 px-2 py-2 overflow-hidden">
-          <img
-            src={user.photoURL ?? `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'U')}&background=16100a&color=ff5300`}
-            alt={user.displayName || 'Avatar'}
-            className="w-8 h-8 shrink-0 object-cover"
-            style={{ border: 'var(--r-border)', borderRadius: 'var(--r-radius)' }}
-          />
+          {/* Avatar générique rétro */}
+          <div
+            className="w-8 h-8 shrink-0 flex items-center justify-center"
+            style={{
+              background:   'var(--ink)',
+              border:       'var(--r-border)',
+              borderRadius: 'var(--r-radius)',
+              color:        'var(--orange)',
+              fontFamily:   'var(--font-display)',
+              fontSize:     '0.7rem',
+            }}
+          >
+            {taskyProfile.name.charAt(0).toUpperCase()}
+          </div>
           <AnimatePresence>
             {!collapsed && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 min-w-0">
                 <p style={{ fontFamily: 'var(--font-display)', fontSize: '0.6rem', color: 'var(--ink)', letterSpacing: '0.04em' }} className="truncate">
-                  {(user.displayName || 'USER').toUpperCase()}
+                  MON ESPACE
                 </p>
-                <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.5rem', color: 'var(--ink-light)' }} className="truncate">
-                  {user.email}
+                <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.5rem', color: 'var(--ink-light)' }}>
+                  MODE LOCAL
                 </p>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
-
-        <button
-          onClick={onLogout}
-          title="Déconnexion"
-          className="nav-item w-full"
-          style={{ color: '#cc3300' }}
-          onMouseEnter={e => { e.currentTarget.style.background = '#fff0e6'; e.currentTarget.style.borderColor = '#cc3300'; }}
-          onMouseLeave={e => { e.currentTarget.style.background = ''; e.currentTarget.style.borderColor = ''; }}
-        >
-          <LogOut className="w-4 h-4 shrink-0" />
-          <AnimatePresence>
-            {!collapsed && (
-              <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                style={{ fontSize: '0.62rem', letterSpacing: '0.07em' }}>
-                DÉCONNEXION
-              </motion.span>
-            )}
-          </AnimatePresence>
-        </button>
       </div>
     </motion.aside>
   );
