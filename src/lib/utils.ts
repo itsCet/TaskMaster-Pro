@@ -65,7 +65,7 @@ export function applyTheme(theme: Theme) {
     zinc:   { primary: '#18181b', hover: '#27272a' },
     violet: { primary: '#7c3aed', hover: '#6d28d9' },
     ocean:  { primary: '#0284c7', hover: '#0369a1' },
-    sunset: { primary: '#ea580c', hover: '#c2410c' },
+    sunset: { primary: '#ff5300', hover: '#e04600' }, // orange vif rétro
     forest: { primary: '#16a34a', hover: '#15803d' },
     sakura: { primary: '#db2777', hover: '#be185d' },
   };

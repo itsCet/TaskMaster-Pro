@@ -12,24 +12,24 @@ import {
 export type SidebarView = 'tasky' | 'tasks' | 'stats' | 'calendar' | 'profile' | 'style' | 'team' | 'settings';
 
 interface SidebarProps {
-  user:        User;
-  view:        SidebarView;
-  onView:      (v: SidebarView) => void;
-  onLogout:    () => void;
+  user:         User;
+  view:         SidebarView;
+  onView:       (v: SidebarView) => void;
+  onLogout:     () => void;
   taskyProfile: TaskyProfile;
-  collapsed:   boolean;
-  onToggle:    () => void;
+  collapsed:    boolean;
+  onToggle:     () => void;
 }
 
-const NAV_ITEMS: { id: SidebarView; label: string; icon: ReactNode; group?: string }[] = [
-  { id: 'tasky',    label: 'Tasky',         icon: <Sparkles  className="w-5 h-5 shrink-0" /> },
-  { id: 'tasks',    label: 'Mes Tâches',    icon: <ListTodo  className="w-5 h-5 shrink-0" />, group: 'sep' },
-  { id: 'stats',    label: 'Statistiques',  icon: <TrendingUp className="w-5 h-5 shrink-0" /> },
-  { id: 'calendar', label: 'Calendrier',    icon: <CalendarDays className="w-5 h-5 shrink-0" /> },
-  { id: 'profile',  label: 'Profil',        icon: <UserIcon  className="w-5 h-5 shrink-0" />, group: 'sep' },
-  { id: 'style',    label: 'Style',         icon: <Palette   className="w-5 h-5 shrink-0" /> },
-  { id: 'team',     label: 'Équipe',        icon: <Users     className="w-5 h-5 shrink-0" /> },
-  { id: 'settings', label: 'Paramètres',   icon: <Settings2 className="w-5 h-5 shrink-0" /> },
+const NAV_ITEMS: { id: SidebarView; label: string; icon: ReactNode; sep?: boolean }[] = [
+  { id: 'tasky',    label: 'Tasky',        icon: <Sparkles     className="w-4 h-4 shrink-0" /> },
+  { id: 'tasks',    label: 'Tâches',       icon: <ListTodo     className="w-4 h-4 shrink-0" />, sep: true },
+  { id: 'stats',    label: 'Stats',        icon: <TrendingUp   className="w-4 h-4 shrink-0" /> },
+  { id: 'calendar', label: 'Calendrier',   icon: <CalendarDays className="w-4 h-4 shrink-0" /> },
+  { id: 'profile',  label: 'Profil',       icon: <UserIcon     className="w-4 h-4 shrink-0" />, sep: true },
+  { id: 'style',    label: 'Style',        icon: <Palette      className="w-4 h-4 shrink-0" /> },
+  { id: 'team',     label: 'Équipe',       icon: <Users        className="w-4 h-4 shrink-0" /> },
+  { id: 'settings', label: 'Paramètres',  icon: <Settings2    className="w-4 h-4 shrink-0" /> },
 ];
 
 export default function Sidebar({ user, view, onView, onLogout, taskyProfile, collapsed, onToggle }: SidebarProps) {
@@ -37,29 +37,50 @@ export default function Sidebar({ user, view, onView, onLogout, taskyProfile, co
 
   return (
     <motion.aside
-      animate={{ width: collapsed ? 68 : 240 }}
+      animate={{ width: collapsed ? 68 : 248 }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-      className="relative flex flex-col h-full bg-white border-r border-zinc-200 overflow-hidden shrink-0 z-20"
+      className="relative flex flex-col h-full shrink-0 z-20 overflow-hidden"
+      style={{
+        background:   'var(--paper-light)',
+        borderRight:  'var(--r-border)',
+        boxShadow:    '4px 0 0 var(--ink)',
+      }}
     >
-      {/* ── Logo ── */}
-      <div className="flex items-center justify-between px-3 pt-4 pb-3 border-b border-zinc-100">
-        <div className="flex items-center gap-2.5 overflow-hidden">
+      {/* ── Logo ───────────────────────────────────────────────────────── */}
+      <div
+        className="flex items-center justify-between px-3 py-3"
+        style={{ borderBottom: 'var(--r-border)' }}
+      >
+        <div className="flex items-center gap-2.5 overflow-hidden min-w-0">
+          {/* Logo stamp */}
           <div
-            className="w-9 h-9 rounded-xl flex items-center justify-center text-white shrink-0 shadow-md"
-            style={{ background: 'var(--color-accent)' }}
+            className="w-9 h-9 shrink-0 flex items-center justify-center"
+            style={{
+              background:   'var(--ink)',
+              borderRadius: 'var(--r-radius)',
+              boxShadow:    'var(--r-shadow-sm)',
+            }}
           >
-            <Sparkles className="w-5 h-5" />
+            <Sparkles className="w-5 h-5" style={{ color: 'var(--orange)' }} />
           </div>
+
           <AnimatePresence>
             {!collapsed && (
               <motion.div
                 initial={{ opacity: 0, x: -8 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -8 }}
-                className="overflow-hidden"
+                className="overflow-hidden min-w-0"
               >
-                <p className="text-sm font-extrabold tracking-tight leading-none">TaskMaster</p>
-                <p className="text-[9px] font-bold uppercase tracking-widest text-zinc-400">Pro</p>
+                <p
+                  className="leading-none truncate"
+                  style={{ fontFamily: 'var(--font-display)', fontSize: '0.72rem', letterSpacing: '0.05em', color: 'var(--ink)' }}
+                >
+                  TASKMASTER
+                </p>
+                <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.55rem', color: 'var(--orange)', letterSpacing: '0.12em', fontWeight: 600 }}>
+                  PRO
+                </p>
               </motion.div>
             )}
           </AnimatePresence>
@@ -67,7 +88,10 @@ export default function Sidebar({ user, view, onView, onLogout, taskyProfile, co
 
         <button
           onClick={onToggle}
-          className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors"
+          className="p-1.5 rounded transition-colors shrink-0"
+          style={{ color: 'var(--ink-mid)' }}
+          onMouseEnter={e => (e.currentTarget.style.background = 'var(--paper-dark)')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
         >
           {collapsed
             ? <ChevronRight className="w-4 h-4" />
@@ -76,16 +100,23 @@ export default function Sidebar({ user, view, onView, onLogout, taskyProfile, co
         </button>
       </div>
 
-      {/* ── Mini Tasky preview (when collapsed) ── */}
+      {/* ── Icône Tasky (collapsed) ─────────────────────────────────────── */}
       {collapsed && (
-        <div className="flex justify-center py-3 border-b border-zinc-100">
-          <div className="text-xl" title={`${taskyProfile.name} — Niv. ${taskyProfile.level} ${levelInfo.name}`}>
+        <div
+          className="flex justify-center py-3"
+          style={{ borderBottom: 'var(--r-border)' }}
+        >
+          <span
+            className="text-xl cursor-pointer"
+            title={`${taskyProfile.name} — Niv.${taskyProfile.level} ${levelInfo.name}`}
+            onClick={() => onView('tasky')}
+          >
             {levelInfo.emoji}
-          </div>
+          </span>
         </div>
       )}
 
-      {/* ── Tasky mini card (when expanded) ── */}
+      {/* ── Carte mini Tasky (expanded) ─────────────────────────────────── */}
       <AnimatePresence>
         {!collapsed && (
           <motion.div
@@ -96,22 +127,27 @@ export default function Sidebar({ user, view, onView, onLogout, taskyProfile, co
           >
             <button
               onClick={() => onView('tasky')}
-              className={cn(
-                "w-full mx-3 mt-3 mb-1 rounded-2xl p-3 flex flex-col items-center gap-1 transition-all",
-                "border-2 cursor-pointer",
-                view === 'tasky'
-                  ? "border-transparent text-white"
-                  : "border-zinc-100 hover:border-zinc-200 bg-zinc-50 hover:bg-zinc-100"
-              )}
-              style={view === 'tasky' ? { background: levelInfo.color + '33', borderColor: levelInfo.color } : {}}
+              className="w-full flex flex-col items-center gap-1.5 p-3 cursor-pointer transition-all"
+              style={{
+                borderBottom: 'var(--r-border)',
+                background: view === 'tasky' ? 'var(--orange-pale)' : 'var(--paper)',
+              }}
+              onMouseEnter={e => { if (view !== 'tasky') e.currentTarget.style.background = 'var(--paper-dark)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = view === 'tasky' ? 'var(--orange-pale)' : 'var(--paper)'; }}
             >
-              <TaskyAvatar level={taskyProfile.level} mood={taskyProfile.mood} size={72} />
-              <div className="text-center">
-                <p className="text-xs font-bold text-zinc-800">{taskyProfile.name}</p>
-                <p className="text-[10px] text-zinc-500">Niv. {taskyProfile.level} · {levelInfo.name}</p>
+              <TaskyAvatar level={taskyProfile.level} mood={taskyProfile.mood} size={80} />
+
+              <div className="text-center w-full px-1">
+                <p style={{ fontFamily: 'var(--font-display)', fontSize: '0.7rem', color: 'var(--ink)', letterSpacing: '0.04em' }}>
+                  {taskyProfile.name}
+                </p>
+                <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.55rem', color: 'var(--ink-mid)' }}>
+                  NIV.{taskyProfile.level} · {levelInfo.name.toUpperCase()}
+                </p>
               </div>
-              {/* XP bar */}
-              <div className="w-full xp-bar mt-1">
+
+              {/* Barre XP */}
+              <div className="w-full xp-bar">
                 <motion.div
                   className="xp-bar-fill"
                   initial={{ width: 0 }}
@@ -119,26 +155,25 @@ export default function Sidebar({ user, view, onView, onLogout, taskyProfile, co
                   transition={{ duration: 1, delay: 0.3 }}
                 />
               </div>
-              <p className="text-[9px] text-zinc-400">
-                {taskyProfile.levelProgress.current} / {taskyProfile.levelProgress.needed || '∞'} XP
+              <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.52rem', color: 'var(--ink-light)' }}>
+                {taskyProfile.levelProgress.current}/{taskyProfile.levelProgress.needed || '∞'} XP
               </p>
             </button>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* ── Navigation ── */}
+      {/* ── Navigation ──────────────────────────────────────────────────── */}
       <nav className="flex-1 px-2 py-2 space-y-0.5 overflow-y-auto no-scrollbar">
-        {NAV_ITEMS.map((item) => (
+        {NAV_ITEMS.map(item => (
           <div key={item.id}>
-            {item.group === 'sep' && <div className="h-px bg-zinc-100 my-2 mx-1" />}
+            {item.sep && (
+              <div style={{ height: 1, background: 'var(--paper-dark)', borderTop: '1px solid var(--ink)', margin: '6px 4px' }} />
+            )}
             <button
               onClick={() => onView(item.id)}
               title={collapsed ? item.label : undefined}
-              className={cn(
-                'nav-item w-full text-left',
-                view === item.id && 'active'
-              )}
+              className={cn('nav-item', view === item.id && 'active')}
             >
               {item.icon}
               <AnimatePresence>
@@ -147,9 +182,9 @@ export default function Sidebar({ user, view, onView, onLogout, taskyProfile, co
                     initial={{ opacity: 0, x: -6 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -6 }}
-                    className="text-sm font-medium truncate"
+                    style={{ fontSize: '0.62rem', letterSpacing: '0.07em' }}
                   >
-                    {item.label}
+                    {item.label.toUpperCase()}
                   </motion.span>
                 )}
               </AnimatePresence>
@@ -158,43 +193,43 @@ export default function Sidebar({ user, view, onView, onLogout, taskyProfile, co
         ))}
       </nav>
 
-      {/* ── User footer ── */}
-      <div className="px-2 pb-4 border-t border-zinc-100 pt-3 space-y-1">
-        <div className={cn("flex items-center gap-2.5 px-2 py-2 rounded-xl", !collapsed && "overflow-hidden")}>
+      {/* ── Footer utilisateur ──────────────────────────────────────────── */}
+      <div className="px-2 pb-3 pt-2" style={{ borderTop: 'var(--r-border)' }}>
+        <div className="flex items-center gap-2.5 px-2 py-2 overflow-hidden">
           <img
-            src={user.photoURL ?? `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'U')}&background=18181b&color=fff`}
+            src={user.photoURL ?? `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'U')}&background=16100a&color=ff5300`}
             alt={user.displayName || 'Avatar'}
-            className="w-8 h-8 rounded-full border-2 border-zinc-200 shrink-0 object-cover"
+            className="w-8 h-8 shrink-0 object-cover"
+            style={{ border: 'var(--r-border)', borderRadius: 'var(--r-radius)' }}
           />
           <AnimatePresence>
             {!collapsed && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="flex-1 min-w-0"
-              >
-                <p className="text-xs font-semibold truncate">{user.displayName}</p>
-                <p className="text-[10px] text-zinc-400 truncate">{user.email}</p>
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 min-w-0">
+                <p style={{ fontFamily: 'var(--font-display)', fontSize: '0.6rem', color: 'var(--ink)', letterSpacing: '0.04em' }} className="truncate">
+                  {(user.displayName || 'USER').toUpperCase()}
+                </p>
+                <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.5rem', color: 'var(--ink-light)' }} className="truncate">
+                  {user.email}
+                </p>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
+
         <button
           onClick={onLogout}
           title="Déconnexion"
-          className="nav-item w-full text-red-400 hover:text-red-600 hover:bg-red-50"
+          className="nav-item w-full"
+          style={{ color: '#cc3300' }}
+          onMouseEnter={e => { e.currentTarget.style.background = '#fff0e6'; e.currentTarget.style.borderColor = '#cc3300'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = ''; e.currentTarget.style.borderColor = ''; }}
         >
-          <LogOut className="w-5 h-5 shrink-0" />
+          <LogOut className="w-4 h-4 shrink-0" />
           <AnimatePresence>
             {!collapsed && (
-              <motion.span
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="text-sm font-medium"
-              >
-                Déconnexion
+              <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                style={{ fontSize: '0.62rem', letterSpacing: '0.07em' }}>
+                DÉCONNEXION
               </motion.span>
             )}
           </AnimatePresence>

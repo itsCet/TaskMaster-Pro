@@ -31,7 +31,7 @@ export default function App() {
   const [view,           setView]          = useState<SidebarView>('tasky');
   const [sidebarOpen,    setSidebarOpen]   = useState(false);   // mobile drawer
   const [sidebarCollapsed, setCollapsed]   = useState(false);   // desktop collapsed
-  const [theme,          setTheme]         = useState<Theme>('zinc');
+  const [theme,          setTheme]         = useState<Theme>('sunset');
   const [darkMode,       setDarkMode]      = useState(false);
   const [compact,        setCompact]       = useState(false);
   const [taskyName,      setTaskyName]     = useState('Tasky');
@@ -107,11 +107,17 @@ export default function App() {
   // ── Loading / Login ───────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-zinc-50">
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--paper)' }}>
+        {/* Loader style arcade — carré qui clignote */}
         <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-          className="w-8 h-8 border-2 border-zinc-200 border-t-zinc-900 rounded-full"
+          animate={{ opacity: [1, 0, 1] }}
+          transition={{ duration: 0.8, repeat: Infinity, ease: 'steps(1)' }}
+          style={{
+            width: 24, height: 24,
+            background: 'var(--orange)',
+            border: '2px solid var(--ink)',
+            boxShadow: '3px 3px 0 var(--ink)',
+          }}
         />
       </div>
     );
@@ -119,36 +125,56 @@ export default function App() {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-br from-zinc-50 to-violet-50">
+      <div className="min-h-screen flex flex-col items-center justify-center p-6" style={{ background: 'var(--paper)' }}>
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: 0.4 }}
           className="w-full max-w-sm text-center"
         >
-          {/* Logo */}
-          <div
-            className="w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl"
-            style={{ background: 'var(--color-accent)' }}
+          {/* Title card — style jaquette arcade */}
+          <motion.div
+            className="stamp-in mb-8 p-6 inline-block"
+            style={{
+              background:   'var(--orange)',
+              border:       'var(--r-border)',
+              borderRadius: 'var(--r-radius)',
+              boxShadow:    'var(--r-shadow-lg)',
+            }}
           >
-            <CheckCircle2 className="w-10 h-10 text-white" />
-          </div>
-          <h1 className="text-3xl font-extrabold tracking-tight mb-2">TaskMaster Pro</h1>
-          <p className="text-zinc-500 mb-2">Organise tes tâches. Fais évoluer Tasky.</p>
-          <p className="text-sm text-zinc-400 mb-8">Ton compagnon virtuel te motive à rester productif chaque jour. 🐾</p>
+            <p style={{ fontFamily: 'var(--font-display)', fontSize: '2.2rem', color: 'var(--paper-light)', letterSpacing: '0.03em', lineHeight: 1.1, textShadow: '3px 3px 0 var(--ink)' }}>
+              TASK<br/>MASTER
+            </p>
+            <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--paper-light)', letterSpacing: '0.18em', marginTop: '0.25rem', opacity: 0.85 }}>
+              ★ PRO EDITION ★
+            </p>
+          </motion.div>
+
+          <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.9rem', color: 'var(--ink-mid)', marginBottom: '0.25rem' }}>
+            Organise tes tâches. Fais évoluer Tasky.
+          </p>
+          <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: 'var(--ink-light)', marginBottom: '2rem' }}>
+            Insert coin to continue...
+          </p>
 
           <button
             onClick={login}
-            className="w-full py-4 bg-zinc-900 text-white rounded-2xl font-semibold flex items-center justify-center gap-3 shadow-lg shadow-zinc-900/20 hover:bg-zinc-800 active:scale-[0.98] transition-all"
+            className="w-full btn-accent flex items-center justify-center gap-3 py-3.5 text-sm"
           >
-            <img src="https://www.google.com/favicon.ico" className="w-5 h-5 invert" alt="" />
-            Se connecter avec Google
+            <img src="https://www.google.com/favicon.ico" className="w-4 h-4 invert" alt="" />
+            SE CONNECTER AVEC GOOGLE
           </button>
 
-          {/* Feature chips */}
+          {/* Feature tags rétro */}
           <div className="flex flex-wrap justify-center gap-2 mt-8">
-            {['🐾 Avatar qui évolue', '✅ Gestion de tâches', '📊 Statistiques', '🎨 Thèmes'].map(f => (
-              <span key={f} className="text-xs bg-white border border-zinc-200 px-3 py-1.5 rounded-full text-zinc-600 shadow-sm">{f}</span>
+            {[['★', 'Avatar qui évolue'], ['✓', 'Gestion de tâches'], ['◉', 'Statistiques'], ['▲', 'Thèmes']].map(([icon, label]) => (
+              <span
+                key={label}
+                className="retro-tag"
+                style={{ fontFamily: 'var(--font-mono)', fontSize: '0.6rem' }}
+              >
+                {icon} {label}
+              </span>
             ))}
           </div>
         </motion.div>
@@ -158,7 +184,7 @@ export default function App() {
 
   // ── Main app layout ───────────────────────────────────────────────────────
   return (
-    <div className={cn('flex h-screen overflow-hidden bg-zinc-50', compact && 'text-sm')}>
+    <div className={cn('flex h-screen overflow-hidden', compact && 'text-sm')} style={{ background: 'var(--paper)' }}>
 
       {/* ── Mobile overlay ── */}
       <AnimatePresence>
@@ -215,18 +241,27 @@ export default function App() {
       {/* ── Main content ── */}
       <div className="flex-1 flex flex-col overflow-hidden">
 
-        {/* Mobile topbar */}
-        <div className="lg:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-zinc-200 shrink-0">
-          <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-xl hover:bg-zinc-100 transition-colors">
-            <Menu className="w-5 h-5" />
+        {/* Mobile topbar — rétro */}
+        <div
+          className="lg:hidden flex items-center justify-between px-4 py-3 shrink-0"
+          style={{ background: 'var(--ink)', borderBottom: '3px solid var(--orange)' }}
+        >
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="p-2 rounded"
+            style={{ border: '1.5px solid var(--orange)', color: 'var(--orange)' }}
+          >
+            <Menu className="w-4 h-4" />
           </button>
-          <span className="font-extrabold text-sm">TaskMaster Pro</span>
+          <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.75rem', color: 'var(--paper-light)', letterSpacing: '0.06em' }}>
+            TASKMASTER PRO
+          </span>
           <button
             onClick={() => setShowAddTask(true)}
-            className="w-9 h-9 rounded-xl text-white flex items-center justify-center"
-            style={{ background: 'var(--color-accent)' }}
+            className="w-9 h-9 flex items-center justify-center"
+            style={{ background: 'var(--orange)', border: '1.5px solid var(--paper-light)', borderRadius: 'var(--r-radius)', boxShadow: 'var(--r-shadow-sm)' }}
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4" style={{ color: 'var(--paper-light)' }} />
           </button>
         </div>
 
