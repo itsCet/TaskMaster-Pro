@@ -64,22 +64,24 @@ export default function ProfileView({ user, tasks, taskyProfile, taskyName, onRe
         className="card p-6"
       >
         <div className="flex items-center gap-5">
-          <div className="relative">
-            <img
-              src={user.photoURL ?? `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'U')}&background=18181b&color=fff&size=128`}
-              alt={user.displayName || 'Avatar'}
-              className="w-20 h-20 rounded-2xl object-cover border-4 border-white shadow-lg"
-            />
-            <div
-              className="absolute -bottom-2 -right-2 w-8 h-8 rounded-xl flex items-center justify-center text-sm border-2 border-white shadow"
-              style={{ background: levelInfo.color }}
-            >
-              {levelInfo.emoji}
-            </div>
+          <div
+            className="w-20 h-20 flex items-center justify-center shrink-0"
+            style={{
+              background: 'var(--ink)',
+              border: 'var(--r-border)',
+              borderRadius: 'var(--r-radius)',
+              boxShadow: 'var(--r-shadow)',
+              color: 'var(--orange)',
+              fontFamily: 'var(--font-display)',
+              fontSize: '2rem',
+              letterSpacing: '0.02em',
+            }}
+          >
+            {taskyProfile.name.charAt(0).toUpperCase()}
           </div>
           <div className="flex-1">
-            <h2 className="text-xl font-extrabold">{user.displayName}</h2>
-            <p className="text-sm text-zinc-500">{user.email}</p>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', letterSpacing: '0.03em' }}>MON ESPACE</h2>
+            <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', color: 'var(--ink-light)' }}>MODE LOCAL</p>
             <div className="flex items-center gap-2 mt-2">
               <span className="text-xs font-semibold px-2.5 py-1 rounded-full text-white" style={{ background: levelInfo.color }}>
                 Niv. {taskyProfile.level} · {levelInfo.name}

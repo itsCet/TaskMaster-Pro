@@ -265,13 +265,24 @@ export default function TaskyView({ tasks, taskyProfile, onAddTask }: Props) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
-          className="card p-6 text-center border-dashed"
+          className="card p-6 text-center"
+          style={{ borderStyle: 'dashed', background: 'var(--orange-pale)' }}
         >
-          <p className="text-4xl mb-3">😴</p>
-          <p className="font-semibold text-zinc-700 mb-1">Tasky t'attend...</p>
-          <p className="text-sm text-zinc-500 mb-4">Lance une tâche pour lui redonner de l'énergie !</p>
-          <button onClick={onAddTask} className="btn-accent">
-            ➕ Ajouter une tâche
+          <motion.div
+            animate={{ rotate: [-5, 5, -5] }}
+            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+            style={{ fontSize: '3rem', marginBottom: '0.75rem' }}
+          >
+            😴
+          </motion.div>
+          <p style={{ fontFamily: 'var(--font-display)', fontSize: '0.85rem', color: 'var(--ink)', marginBottom: '0.25rem' }}>
+            TASKY T'ATTEND...
+          </p>
+          <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.82rem', color: 'var(--ink-mid)', marginBottom: '1.25rem' }}>
+            Complète une tâche pour lui redonner de l'énergie et gagner des XP !
+          </p>
+          <button onClick={onAddTask} className="btn-accent mx-auto" style={{ fontSize: '0.75rem' }}>
+            ➕ CRÉER MA PREMIÈRE TÂCHE
           </button>
         </motion.div>
       )}

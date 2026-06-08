@@ -4,11 +4,13 @@ import {
   onSnapshot, signInAnonymously, onAuthStateChanged, User,
   handleFirestoreError, OperationType, doc, serverTimestamp,
 } from './lib/firebase';
-import { Task, Theme } from './types';
+import { Task, Theme, LEVEL_CONFIG } from './types';
 import { getTaskyProfile, applyTheme } from './lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 
 import Sidebar, { SidebarView } from './components/Sidebar';
+import MobileBottomNav from './components/MobileBottomNav';
+import OnboardingModal from './components/OnboardingModal';
 import TaskyView    from './components/TaskyView';
 import TasksView    from './components/TasksView';
 import ProfileView  from './components/ProfileView';
@@ -35,6 +37,8 @@ export default function App() {
   const [compact,        setCompact]       = useState(false);
   const [taskyName,      setTaskyName]     = useState('Tasky');
   const [showAddTask,    setShowAddTask]   = useState(false);
+  const [celebrating,   setCelebrating]  = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   // ── Auth anonyme automatique (pas de login requis) ───────────────────────
   const logout = () => {}; // no-op — auth anonyme, pas de déconnexion
@@ -94,6 +98,17 @@ export default function App() {
       } catch {}
     }
     if (window.matchMedia('(prefers-color-scheme: dark)').matches) setDarkMode(true);
+  }, []);
+
+  useEffect(() => {
+    if (user && !localStorage.getItem('tasky-onboarded')) {
+      setShowOnboarding(true);
+    }
+  }, [user]);
+
+  const handleTaskComplete = useCallback(() => {
+    setCelebrating(true);
+    setTimeout(() => setCelebrating(false), 2200);
   }, []);
 
   const savePrefs = useCallback((patch: Record<string, unknown>) => {
@@ -167,6 +182,7 @@ export default function App() {
           taskyProfile={taskyProfile}
           collapsed={sidebarCollapsed}
           onToggle={handleCollapse}
+          celebrating={celebrating}
         />
       </div>
 
@@ -189,6 +205,7 @@ export default function App() {
               taskyProfile={taskyProfile}
               collapsed={false}
               onToggle={() => setSidebarOpen(false)}
+              celebrating={celebrating}
             />
           </motion.div>
         )}
@@ -197,32 +214,18 @@ export default function App() {
       {/* ── Main content ── */}
       <div className="flex-1 flex flex-col overflow-hidden">
 
-        {/* Mobile topbar — rétro */}
+        {/* Mobile topbar */}
         <div
-          className="lg:hidden flex items-center justify-between px-4 py-3 shrink-0"
-          style={{ background: 'var(--ink)', borderBottom: '3px solid var(--orange)' }}
+          className="lg:hidden flex items-center justify-center px-4 py-3 shrink-0"
+          style={{ background: 'var(--paper-light)', borderBottom: 'var(--r-border)' }}
         >
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="p-2 rounded"
-            style={{ border: '1.5px solid var(--orange)', color: 'var(--orange)' }}
-          >
-            <Menu className="w-4 h-4" />
-          </button>
-          <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.75rem', color: 'var(--paper-light)', letterSpacing: '0.06em' }}>
+          <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.8rem', color: 'var(--ink)', letterSpacing: '0.05em' }}>
             TASKMASTER PRO
           </span>
-          <button
-            onClick={() => setShowAddTask(true)}
-            className="w-9 h-9 flex items-center justify-center"
-            style={{ background: 'var(--orange)', border: '1.5px solid var(--paper-light)', borderRadius: 'var(--r-radius)', boxShadow: 'var(--r-shadow-sm)' }}
-          >
-            <Plus className="w-4 h-4" style={{ color: 'var(--paper-light)' }} />
-          </button>
         </div>
 
         {/* View content */}
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto pb-16 lg:pb-0">
           <AnimatePresence mode="wait">
             {view === 'tasky' && (
               <motion.div key="tasky" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }}>
@@ -231,7 +234,7 @@ export default function App() {
             )}
             {view === 'tasks' && (
               <motion.div key="tasks" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} className="h-full">
-                <TasksView tasks={tasks} />
+                <TasksView tasks={tasks} onTaskComplete={handleTaskComplete} />
               </motion.div>
             )}
             {view === 'stats' && (
@@ -266,6 +269,11 @@ export default function App() {
             )}
           </AnimatePresence>
         </main>
+        <MobileBottomNav
+          view={view}
+          onView={v => { setView(v); setSidebarOpen(false); }}
+          taskyEmoji={LEVEL_CONFIG[taskyProfile.level].emoji}
+        />
       </div>
 
       {/* ── Quick add modal (from Tasky CTA or mobile button) ── */}
@@ -294,6 +302,17 @@ export default function App() {
               </div>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showOnboarding && (
+          <OnboardingModal
+            onClose={() => {
+              localStorage.setItem('tasky-onboarded', 'true');
+              setShowOnboarding(false);
+            }}
+          />
         )}
       </AnimatePresence>
     </div>

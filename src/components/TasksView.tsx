@@ -16,11 +16,12 @@ import { writeBatch } from 'firebase/firestore';
 type SubView = 'list' | 'stats' | 'calendar';
 
 interface TasksViewProps {
-  tasks:      Task[];
-  initialSub?: SubView;
+  tasks:           Task[];
+  initialSub?:     SubView;
+  onTaskComplete?: () => void;
 }
 
-export default function TasksView({ tasks, initialSub = 'list' }: TasksViewProps) {
+export default function TasksView({ tasks, initialSub = 'list', onTaskComplete }: TasksViewProps) {
   const [subView,         setSubView]         = useState<SubView>(initialSub);
   const [showForm,        setShowForm]         = useState(false);
   const [editingTask,     setEditingTask]       = useState<Task | null>(null);
@@ -187,7 +188,7 @@ export default function TasksView({ tasks, initialSub = 'list' }: TasksViewProps
                   </div>
                   {pending.length > 0 ? (
                     <AnimatePresence>
-                      {pending.map(task => <TaskItem key={task.id} task={task} onEdit={openEdit} />)}
+                      {pending.map(task => <TaskItem key={task.id} task={task} onEdit={openEdit} onComplete={onTaskComplete} />)}
                     </AnimatePresence>
                   ) : (
                     <div className="card border-dashed text-center py-10">
@@ -203,7 +204,7 @@ export default function TasksView({ tasks, initialSub = 'list' }: TasksViewProps
                     <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full text-[10px] font-bold">{completed.length}</span>
                   </div>
                   <AnimatePresence>
-                    {completed.map(task => <TaskItem key={task.id} task={task} onEdit={openEdit} />)}
+                    {completed.map(task => <TaskItem key={task.id} task={task} onEdit={openEdit} onComplete={onTaskComplete} />)}
                   </AnimatePresence>
                   {completed.length === 0 && (
                     <div className="card border-dashed text-center py-10">

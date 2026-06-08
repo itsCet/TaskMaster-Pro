@@ -19,6 +19,7 @@ interface SidebarProps {
   taskyProfile: TaskyProfile;
   collapsed:    boolean;
   onToggle:     () => void;
+  celebrating?: boolean;
 }
 
 const NAV_ITEMS: { id: SidebarView; label: string; icon: ReactNode; sep?: boolean }[] = [
@@ -32,7 +33,7 @@ const NAV_ITEMS: { id: SidebarView; label: string; icon: ReactNode; sep?: boolea
   { id: 'settings', label: 'Paramètres',  icon: <Settings2    className="w-4 h-4 shrink-0" /> },
 ];
 
-export default function Sidebar({ user, view, onView, onLogout, taskyProfile, collapsed, onToggle }: SidebarProps) {
+export default function Sidebar({ user, view, onView, onLogout, taskyProfile, collapsed, onToggle, celebrating }: SidebarProps) {
   const levelInfo = LEVEL_CONFIG[taskyProfile.level];
 
   return (
@@ -135,7 +136,7 @@ export default function Sidebar({ user, view, onView, onLogout, taskyProfile, co
               onMouseEnter={e => { if (view !== 'tasky') e.currentTarget.style.background = 'var(--paper-dark)'; }}
               onMouseLeave={e => { e.currentTarget.style.background = view === 'tasky' ? 'var(--orange-pale)' : 'var(--paper)'; }}
             >
-              <TaskyAvatar level={taskyProfile.level} mood={taskyProfile.mood} size={80} />
+              <TaskyAvatar level={taskyProfile.level} mood={celebrating ? 'celebrating' : taskyProfile.mood} size={80} celebrating={celebrating} />
 
               <div className="text-center w-full px-1">
                 <p style={{ fontFamily: 'var(--font-display)', fontSize: '0.7rem', color: 'var(--ink)', letterSpacing: '0.04em' }}>
@@ -182,7 +183,7 @@ export default function Sidebar({ user, view, onView, onLogout, taskyProfile, co
                     initial={{ opacity: 0, x: -6 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -6 }}
-                    style={{ fontSize: '0.62rem', letterSpacing: '0.07em' }}
+                    style={{ fontFamily: 'var(--font-sans)', fontWeight: 700, fontSize: '0.78rem', letterSpacing: '0.01em' }}
                   >
                     {item.label.toUpperCase()}
                   </motion.span>

@@ -15,13 +15,15 @@ const PRIORITY_RETRO: Record<string, { bg: string; border: string; text: string;
 };
 
 interface TaskItemProps {
-  task:   Task;
-  onEdit: (task: Task) => void;
-  key?:   React.Key;
+  task:       Task;
+  onEdit:     (task: Task) => void;
+  onComplete?: () => void;
+  key?:       React.Key;
 }
 
-export default function TaskItem({ task, onEdit }: TaskItemProps) {
+export default function TaskItem({ task, onEdit, onComplete }: TaskItemProps) {
   const [isDeleting, setIsDeleting] = useState(false);
+  const [burst, setBurst] = useState(false);
 
   const toggleStatus = async () => {
     const newStatus = task.status === 'pending' ? 'completed' : 'pending';
@@ -30,6 +32,11 @@ export default function TaskItem({ task, onEdit }: TaskItemProps) {
         status:      newStatus,
         completedAt: newStatus === 'completed' ? serverTimestamp() : null,
       });
+      if (newStatus === 'completed') {
+        onComplete?.();
+        setBurst(true);
+        setTimeout(() => setBurst(false), 1200);
+      }
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `tasks/${task.id}`);
     }
@@ -48,6 +55,23 @@ export default function TaskItem({ task, onEdit }: TaskItemProps) {
   const p = PRIORITY_RETRO[task.priority] ?? PRIORITY_RETRO.medium;
 
   return (
+    <div className="relative">
+      {burst && (
+        <div className="absolute inset-0 pointer-events-none" style={{ overflow: 'visible', zIndex: 10 }}>
+          {(['★', '✦', '+10XP'] as const).map((s, i) => (
+            <motion.span
+              key={i}
+              className="absolute text-xs font-bold"
+              style={{ left: `${10 + i * 30}%`, top: 0, color: 'var(--orange)', fontFamily: 'var(--font-display)' }}
+              initial={{ y: 0, opacity: 1, scale: 1 }}
+              animate={{ y: -50, opacity: 0, scale: 1.3 }}
+              transition={{ duration: 0.9, delay: i * 0.1, ease: 'easeOut' }}
+            >
+              {s}
+            </motion.span>
+          ))}
+        </div>
+      )}
     <motion.div
       layout
       initial={{ opacity: 0, y: 8 }}
@@ -171,5 +195,6 @@ export default function TaskItem({ task, onEdit }: TaskItemProps) {
         </button>
       </div>
     </motion.div>
+    </div>
   );
 }
