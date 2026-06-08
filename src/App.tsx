@@ -1,450 +1,320 @@
-import { useState, useEffect } from 'react';
-import { 
-  auth, 
-  db, 
-  collection, 
-  query, 
-  where, 
-  orderBy, 
-  onSnapshot, 
-  signInWithPopup, 
-  googleProvider, 
-  signOut, 
-  onAuthStateChanged,
-  User,
-  handleFirestoreError,
-  OperationType,
-  doc,
-  serverTimestamp
+import { useState, useEffect, useCallback } from 'react';
+import {
+  auth, db, collection, query, where, orderBy,
+  onSnapshot, signInAnonymously, onAuthStateChanged, User,
+  handleFirestoreError, OperationType, doc, serverTimestamp,
 } from './lib/firebase';
-import { Task } from './types';
-import TaskItem from './components/TaskItem';
-import TaskForm from './components/TaskForm';
-import Stats from './components/Stats';
-import CalendarView from './components/CalendarView';
-import { X, LayoutDashboard, 
-  CheckCircle2, 
-  ListTodo, 
-  Plus, 
-  LogOut, 
-  ChevronRight,
-  TrendingUp,
-  Search,
-  Filter,
-  CalendarDays,
-  Moon,
-  Sun,
-  Trash2
-} from 'lucide-react';
+import { Task, Theme, LEVEL_CONFIG } from './types';
+import { getTaskyProfile, applyTheme } from './lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
-import { cn } from './lib/utils';
-import { writeBatch } from 'firebase/firestore';
 
-type View = 'list' | 'stats' | 'calendar';
+import Sidebar, { SidebarView } from './components/Sidebar';
+import MobileBottomNav from './components/MobileBottomNav';
+import OnboardingModal from './components/OnboardingModal';
+import TaskyView    from './components/TaskyView';
+import TasksView    from './components/TasksView';
+import ProfileView  from './components/ProfileView';
+import StyleView    from './components/StyleView';
+import TeamView     from './components/TeamView';
+import SettingsView from './components/SettingsView';
+import Stats        from './components/Stats';
+import CalendarView from './components/CalendarView';
+import TaskForm     from './components/TaskForm';
+
+import { Menu, X, Plus } from 'lucide-react';
+import { writeBatch } from 'firebase/firestore';
+import { cn } from './lib/utils';
 
 export default function App() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [view, setView] = useState<View>('list');
-  const [showForm, setShowForm] = useState(false);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterPriority, setFilterPriority] = useState<string>('all');
-  const [filterCategory, setFilterCategory] = useState<string>('all');
-  const [darkMode, setDarkMode] = useState(false);
+  const [user,           setUser]          = useState<User | null>(null);
+  const [loading,        setLoading]       = useState(true);
+  const [tasks,          setTasks]         = useState<Task[]>([]);
+  const [view,           setView]          = useState<SidebarView>('tasky');
+  const [sidebarOpen,    setSidebarOpen]   = useState(false);   // mobile drawer
+  const [sidebarCollapsed, setCollapsed]   = useState(false);   // desktop collapsed
+  const [theme,          setTheme]         = useState<Theme>('sunset');
+  const [darkMode,       setDarkMode]      = useState(false);
+  const [compact,        setCompact]       = useState(false);
+  const [taskyName,      setTaskyName]     = useState('Tasky');
+  const [showAddTask,    setShowAddTask]   = useState(false);
+  const [celebrating,   setCelebrating]  = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  // ── Auth anonyme automatique (pas de login requis) ───────────────────────
+  const logout = () => {}; // no-op — auth anonyme, pas de déconnexion
 
   useEffect(() => {
-    if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      setDarkMode(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [darkMode]);
-
-  const toggleDarkMode = () => {
-    setDarkMode(!darkMode);
-  };
-
-  const login = async () => {
-    try {
-      await signInWithPopup(auth, googleProvider);
-    } catch (error) {
-      console.error("Login failed", error);
-    }
-  };
-
-  const logout = async () => {
-    try {
-      await signOut(auth);
-    } catch (error) {
-      console.error("Logout failed", error);
-    }
-  };
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
-      setUser(u);
-      setLoading(false);
+    const unsub = onAuthStateChanged(auth, async u => {
+      if (u) {
+        setUser(u);
+        setLoading(false);
+      } else {
+        try {
+          await signInAnonymously(auth);
+          // onAuthStateChanged se redéclenche avec le nouvel utilisateur
+        } catch (e) {
+          console.error('Anonymous auth failed', e);
+          setLoading(false);
+        }
+      }
     });
-    return () => unsubscribe();
+    return () => unsub();
   }, []);
 
+  // ── Firestore tasks ───────────────────────────────────────────────────────
   useEffect(() => {
-    if (!user) {
-      setTasks([]);
-      return;
-    }
-
+    if (!user) { setTasks([]); return; }
     const q = query(
       collection(db, 'tasks'),
       where('ownerId', '==', user.uid),
       orderBy('createdAt', 'desc')
     );
-
-    const unsubscribe = onSnapshot(q, 
-      (snapshot) => {
-        const t: Task[] = [];
-        snapshot.forEach((doc) => {
-          t.push({ id: doc.id, ...doc.data() } as Task);
-        });
-        setTasks(t);
-      },
-      (error) => {
-        handleFirestoreError(error, OperationType.LIST, 'tasks');
-      }
+    const unsub = onSnapshot(
+      q,
+      snap => setTasks(snap.docs.map(d => ({ id: d.id, ...d.data() } as Task))),
+      err  => handleFirestoreError(err, OperationType.LIST, 'tasks')
     );
-
-    return () => unsubscribe();
+    return () => unsub();
   }, [user]);
 
-  const bulkMarkDone = async () => {
-    const batch = writeBatch(db);
-    tasks.filter(t => t.status === 'pending').forEach(t => {
-      batch.update(doc(db, 'tasks', t.id), { status: 'completed', completedAt: serverTimestamp() });
-    });
-    await batch.commit();
-  };
+  // ── Theme ─────────────────────────────────────────────────────────────────
+  useEffect(() => { applyTheme(theme); }, [theme]);
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', darkMode);
+  }, [darkMode]);
+  useEffect(() => {
+    document.documentElement.classList.toggle('compact', compact);
+  }, [compact]);
 
-  const bulkDeleteDone = async () => {
-    const completedTasks = tasks.filter(t => t.status === 'completed');
-    if (completedTasks.length === 0) return;
-    
-    const batch = writeBatch(db);
-    completedTasks.forEach(t => {
-      batch.delete(doc(db, 'tasks', t.id));
-    });
-    
-    try {
-      await batch.commit();
-    } catch (error) {
-      console.error('Error in bulkDeleteDone:', error);
-      handleFirestoreError(error, OperationType.WRITE, 'tasks');
+  // ── Persist preferences ───────────────────────────────────────────────────
+  useEffect(() => {
+    const saved = localStorage.getItem('tasky-prefs');
+    if (saved) {
+      try {
+        const p = JSON.parse(saved);
+        if (p.theme)      setTheme(p.theme);
+        if (p.taskyName)  setTaskyName(p.taskyName);
+        if (p.collapsed !== undefined) setCollapsed(p.collapsed);
+      } catch {}
     }
-  };
- 
-  const filteredTasks = tasks.filter(t => {
-    const matchesSearch = t.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          (t.description?.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesPriority = filterPriority === 'all' || t.priority === filterPriority;
-    const matchesCategory = filterCategory === 'all' || t.category === filterCategory;
-    return matchesSearch && matchesPriority && matchesCategory;
-  });
+    if (window.matchMedia('(prefers-color-scheme: dark)').matches) setDarkMode(true);
+  }, []);
 
-  const categories = Array.from(new Set(tasks.map(t => t.category).filter(Boolean)));
-  
-  // ... rest of the App component ...
+  useEffect(() => {
+    if (user && !localStorage.getItem('tasky-onboarded')) {
+      setShowOnboarding(true);
+    }
+  }, [user]);
 
-  const pendingTasks = filteredTasks.filter(t => t.status === 'pending');
-  const completedTasks = filteredTasks.filter(t => t.status === 'completed');
+  const handleTaskComplete = useCallback(() => {
+    setCelebrating(true);
+    setTimeout(() => setCelebrating(false), 2200);
+  }, []);
 
-  if (loading) {
+  const savePrefs = useCallback((patch: Record<string, unknown>) => {
+    const saved = localStorage.getItem('tasky-prefs');
+    const prev  = saved ? JSON.parse(saved) : {};
+    localStorage.setItem('tasky-prefs', JSON.stringify({ ...prev, ...patch }));
+  }, []);
+
+  const handleTheme = (t: Theme) => { setTheme(t); savePrefs({ theme: t }); };
+  const handleRenameTasky = (name: string) => { setTaskyName(name); savePrefs({ taskyName: name }); };
+  const handleCollapse = () => { setCollapsed(c => { savePrefs({ collapsed: !c }); return !c; }); };
+
+  // ── Tasky profile ─────────────────────────────────────────────────────────
+  const taskyProfile = getTaskyProfile(tasks, taskyName);
+
+  // ── Écran de chargement (auth anonyme en cours) ──────────────────────────
+  if (loading || !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-zinc-50">
-        <motion.div 
-          animate={{ rotate: 360 }}
-          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-          className="w-8 h-8 border-2 border-zinc-200 border-t-zinc-900 rounded-full"
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4" style={{ background: 'var(--paper)' }}>
+        <div
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: '1.4rem',
+            color: 'var(--orange)',
+            letterSpacing: '0.05em',
+            textShadow: '2px 2px 0 var(--ink)',
+          }}
+        >
+          TASKMASTER
+        </div>
+        <motion.div
+          animate={{ opacity: [1, 1, 0, 0] }}
+          transition={{ duration: 0.8, repeat: Infinity, ease: 'linear', times: [0, 0.49, 0.5, 1] }}
+          style={{
+            width: 18, height: 18,
+            background: 'var(--orange)',
+            border: '2px solid var(--ink)',
+            boxShadow: '3px 3px 0 var(--ink)',
+          }}
         />
       </div>
     );
   }
 
-  if (!user) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-zinc-50">
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-sm text-center"
-        >
-          <div className="w-16 h-16 bg-zinc-900 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-zinc-900/20">
-            <CheckCircle2 className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-3xl font-extrabold tracking-tight mb-3">TaskMaster Pro</h1>
-          <p className="text-zinc-500 mb-10">Optimisez votre gestion quotidienne avec précision et clarté.</p>
-          <button 
-            onClick={login}
-            className="w-full py-4 bg-zinc-900 text-white rounded-2xl font-semibold flex items-center justify-center gap-3 shadow-lg shadow-zinc-900/20 transition-all hover:bg-zinc-800 active:scale-[0.98]"
-          >
-            <img src="https://www.google.com/favicon.ico" className="w-5 h-5 invert" alt="" />
-            Se connecter avec Google
-          </button>
-        </motion.div>
-      </div>
-    );
-  }
-
+  // ── Main app layout ───────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-zinc-50 flex flex-col">
-      {/* Header */}
-      <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-zinc-200 px-6 py-4">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-             <div className="w-10 h-10 bg-zinc-900 rounded-xl flex items-center justify-center shadow-lg shadow-zinc-900/10">
-              <CheckCircle2 className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold tracking-tight leading-none">TaskMaster</h1>
-              <p className="text-[10px] uppercase tracking-widest text-zinc-400 font-bold">Workspace</p>
-            </div>
-          </div>
+    <div className={cn('flex h-screen overflow-hidden', compact && 'text-sm')} style={{ background: 'var(--paper)' }}>
 
-          <div className="flex items-center gap-2">
-            <div className="hidden sm:flex flex-col items-end mr-2 text-right">
-              <span className="text-xs font-semibold">{user.displayName}</span>
-              <span className="text-[10px] text-zinc-400">{user.email}</span>
-            </div>
-            <button 
-              onClick={logout}
-              className="p-2 text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition-colors"
-              title="Déconnexion"
-            >
-              <LogOut className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Navigation */}
-      <nav className="bg-white border-b border-zinc-200">
-        <div className="max-w-5xl mx-auto px-6 flex items-center overflow-x-auto no-scrollbar">
-          <button 
-            onClick={() => setView('list')}
-            className={cn(
-              "px-4 py-4 text-sm font-medium flex items-center gap-2 border-b-2 transition-all whitespace-nowrap",
-              view === 'list' ? "border-zinc-900 text-zinc-900" : "border-transparent text-zinc-400 hover:text-zinc-600"
-            )}
-          >
-            <ListTodo className="w-4 h-4" />
-            Mes Tâches
-          </button>
-          <button 
-            onClick={() => setView('stats')}
-            className={cn(
-              "px-4 py-4 text-sm font-medium flex items-center gap-2 border-b-2 transition-all whitespace-nowrap",
-              view === 'stats' ? "border-zinc-900 text-zinc-900" : "border-transparent text-zinc-400 hover:text-zinc-600"
-            )}
-          >
-            <TrendingUp className="w-4 h-4" />
-            Statistiques
-          </button>
-          <button 
-            onClick={() => setView('calendar')}
-            className={cn(
-              "px-4 py-4 text-sm font-medium flex items-center gap-2 border-b-2 transition-all whitespace-nowrap",
-              view === 'calendar' ? "border-zinc-900 text-zinc-900" : "border-transparent text-zinc-400 hover:text-zinc-600"
-            )}
-          >
-            <CalendarDays className="w-4 h-4" />
-            Calendrier
-          </button>
-        </div>
-      </nav>
-
-      <main className="flex-1 max-w-5xl w-full mx-auto p-6">
-        <AnimatePresence mode="wait">
-          {view === 'list' ? (
-            <motion.div
-              key="list"
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 10 }}
-              className="space-y-8"
-            >
-              {/* Toolbar */}
-              <div className="flex flex-col gap-4 bg-white p-6 rounded-3xl border border-zinc-100 shadow-[0_4px_20px_rgba(0,0,0,0.03)]">
-                <div className="relative flex-1 w-full">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-                  <input 
-                    type="text" 
-                    placeholder="Qu'est-ce qui presse aujourd'hui ?"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full bg-zinc-50 border border-zinc-100 rounded-2xl pl-12 pr-4 py-3 text-sm focus:ring-2 focus:ring-zinc-900/5 outline-none transition-all placeholder:text-zinc-400"
-                  />
-                </div>
-                <div className="flex flex-wrap items-center gap-3 w-full">
-                  <div className="flex items-center gap-2 bg-zinc-50 border border-zinc-100 px-4 py-2.5 rounded-2xl text-zinc-600">
-                    <Filter className="w-3.5 h-3.5 text-zinc-400" />
-                    <select 
-                      value={filterPriority}
-                      onChange={(e) => setFilterPriority(e.target.value)}
-                      className="bg-transparent text-xs font-semibold border-none outline-none cursor-pointer"
-                    >
-                      <option value="all">Priorité : Tout</option>
-                      <option value="low">Basse</option>
-                      <option value="medium">Moyenne</option>
-                      <option value="high">Haute</option>
-                      <option value="urgent">Urgente</option>
-                    </select>
-                  </div>
-                  <div className="flex items-center gap-2 bg-zinc-50 border border-zinc-100 px-4 py-2.5 rounded-2xl text-zinc-600">
-                    <Filter className="w-3.5 h-3.5 text-zinc-400" />
-                    <select 
-                      value={filterCategory}
-                      onChange={(e) => setFilterCategory(e.target.value)}
-                      className="bg-transparent text-xs font-semibold border-none outline-none cursor-pointer"
-                    >
-                      <option value="all">Catégorie : Tout</option>
-                      {categories.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  </div>
-                  <div className="flex-1" />
-                  <button onClick={bulkMarkDone} className="text-xs font-semibold text-zinc-500 hover:text-zinc-900 transition-colors flex items-center gap-2 px-3 py-2">
-                    <CheckCircle2 className="w-3.5 h-3.5" /> Tout finir
-                  </button>
-                  <button onClick={bulkDeleteDone} className="text-xs font-semibold text-red-500 hover:text-red-700 transition-colors flex items-center gap-2 px-3 py-2">
-                    <Trash2 className="w-3.5 h-3.5" /> Suppr. terminées
-                  </button>
-                  <button 
-                    onClick={() => setShowForm(true)}
-                    className="flex items-center gap-2.5 bg-zinc-900 hover:bg-zinc-800 text-white text-sm font-semibold px-5 py-2.5 rounded-2xl transition-all active:scale-[0.98] shadow-lg shadow-zinc-900/10"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Ajouter
-                  </button>
-                  <button onClick={toggleDarkMode} className="p-3 bg-zinc-100 rounded-2xl hover:bg-zinc-200 transition-colors">
-                    {darkMode ? <Sun className="w-4 h-4 text-zinc-500" /> : <Moon className="w-4 h-4 text-zinc-500" />}
-                  </button>
-                </div>
-              </div>
-
-              {/* Task Section */}
-              <div className="grid md:grid-cols-2 gap-8 items-start">
-                <section>
-                  <div className="flex items-center justify-between mb-4 px-2">
-                    <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-400">En cours</h2>
-                    <span className="bg-zinc-200 text-zinc-600 px-2 py-0.5 rounded-full text-[10px] font-bold">
-                      {pendingTasks.length}
-                    </span>
-                  </div>
-                  
-                  {pendingTasks.length > 0 ? (
-                    <div className="space-y-1">
-                      <AnimatePresence>
-                        {pendingTasks.map((task) => (
-                          <TaskItem key={task.id} task={task} onEdit={setEditingTask} />
-                        ))}
-                      </AnimatePresence>
-                    </div>
-                  ) : (
-                    <div className="text-center py-12 card border-dashed">
-                      <div className="w-12 h-12 bg-zinc-50 rounded-full flex items-center justify-center mx-auto mb-3">
-                        <ListTodo className="w-6 h-6 text-zinc-300" />
-                      </div>
-                      <p className="text-zinc-400 text-sm">Tout est en ordre !</p>
-                    </div>
-                  )}
-                </section>
-
-                <section>
-                  <div className="flex items-center justify-between mb-4 px-2">
-                    <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-400">Terminées</h2>
-                    <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full text-[10px] font-bold">
-                      {completedTasks.length}
-                    </span>
-                  </div>
-
-                  <div className="space-y-1">
-                    <AnimatePresence>
-                      {completedTasks.map((task) => (
-                        <TaskItem key={task.id} task={task} onEdit={setEditingTask} />
-                      ))}
-                    </AnimatePresence>
-                  </div>
-                </section>
-              </div>
-            </motion.div>
-          ) : view === 'stats' ? (
-            <motion.div
-              key="stats"
-              initial={{ opacity: 0, x: 10 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -10 }}
-            >
-              <Stats tasks={tasks} />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="calendar"
-              initial={{ opacity: 0, x: 10 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -10 }}
-            >
-              <CalendarView tasks={tasks} />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </main>
-
-      {/* Modal Form Overlay */}
+      {/* ── Mobile overlay ── */}
       <AnimatePresence>
-        {showForm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowForm(false)}
-              className="absolute inset-0 bg-zinc-900/60 backdrop-blur-sm"
+        {sidebarOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-zinc-900/50 backdrop-blur-sm z-30 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ── Sidebar (desktop always visible, mobile drawer) ── */}
+      <div className={cn(
+        'hidden lg:flex h-full transition-all',
+      )}>
+        <Sidebar
+          user={user}
+          view={view}
+          onView={v => { setView(v); setSidebarOpen(false); }}
+          onLogout={logout}
+          taskyProfile={taskyProfile}
+          collapsed={sidebarCollapsed}
+          onToggle={handleCollapse}
+          celebrating={celebrating}
+        />
+      </div>
+
+      {/* Mobile sidebar drawer */}
+      <AnimatePresence>
+        {sidebarOpen && (
+          <motion.div
+            initial={{ x: -280 }}
+            animate={{ x: 0 }}
+            exit={{ x: -280 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            className="fixed left-0 top-0 h-full z-40 lg:hidden"
+            style={{ width: 240 }}
+          >
+            <Sidebar
+              user={user}
+              view={view}
+              onView={v => { setView(v); setSidebarOpen(false); }}
+              onLogout={logout}
+              taskyProfile={taskyProfile}
+              collapsed={false}
+              onToggle={() => setSidebarOpen(false)}
+              celebrating={celebrating}
             />
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Main content ── */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+
+        {/* Mobile topbar */}
+        <div
+          className="lg:hidden flex items-center justify-center px-4 py-3 shrink-0"
+          style={{ background: 'var(--paper-light)', borderBottom: 'var(--r-border)' }}
+        >
+          <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.8rem', color: 'var(--ink)', letterSpacing: '0.05em' }}>
+            TASKMASTER PRO
+          </span>
+        </div>
+
+        {/* View content */}
+        <main className="flex-1 overflow-y-auto pb-16 lg:pb-0">
+          <AnimatePresence mode="wait">
+            {view === 'tasky' && (
+              <motion.div key="tasky" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }}>
+                <TaskyView tasks={tasks} taskyProfile={taskyProfile} onAddTask={() => { setView('tasks'); setShowAddTask(true); }} />
+              </motion.div>
+            )}
+            {view === 'tasks' && (
+              <motion.div key="tasks" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} className="h-full">
+                <TasksView tasks={tasks} onTaskComplete={handleTaskComplete} />
+              </motion.div>
+            )}
+            {view === 'stats' && (
+              <motion.div key="stats" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} className="p-6">
+                <Stats tasks={tasks} />
+              </motion.div>
+            )}
+            {view === 'calendar' && (
+              <motion.div key="calendar" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} className="p-6">
+                <CalendarView tasks={tasks} />
+              </motion.div>
+            )}
+            {view === 'profile' && (
+              <motion.div key="profile" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }}>
+                <ProfileView user={user} tasks={tasks} taskyProfile={taskyProfile} taskyName={taskyName} onRenameTasky={handleRenameTasky} />
+              </motion.div>
+            )}
+            {view === 'style' && (
+              <motion.div key="style" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }}>
+                <StyleView currentTheme={theme} onTheme={handleTheme} darkMode={darkMode} onDarkMode={setDarkMode} compact={compact} onCompact={setCompact} />
+              </motion.div>
+            )}
+            {view === 'team' && (
+              <motion.div key="team" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }}>
+                <TeamView />
+              </motion.div>
+            )}
+            {view === 'settings' && (
+              <motion.div key="settings" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }}>
+                <SettingsView user={user} tasks={tasks} onLogout={logout} />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </main>
+        <MobileBottomNav
+          view={view}
+          onView={v => { setView(v); setSidebarOpen(false); }}
+          taskyEmoji={LEVEL_CONFIG[taskyProfile.level].emoji}
+        />
+      </div>
+
+      {/* ── Quick add modal (from Tasky CTA or mobile button) ── */}
+      <AnimatePresence>
+        {showAddTask && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-zinc-900/60 backdrop-blur-sm"
+              onClick={() => setShowAddTask(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 16 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              exit={{ opacity: 0, scale: 0.95, y: 16 }}
               className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden"
             >
-              <div className="px-8 py-6 border-b border-zinc-100 flex items-center justify-between">
-                <h2 className="text-xl font-bold">{editingTask ? 'Modifier la Tâche' : 'Nouvelle Tâche'}</h2>
-                <button 
-                  onClick={() => { setShowForm(false); setEditingTask(null); }}
-                  className="p-2 hover:bg-zinc-100 rounded-full transition-colors"
-                >
+              <div className="px-8 py-5 border-b border-zinc-100 flex items-center justify-between">
+                <h2 className="text-lg font-bold">Nouvelle tâche</h2>
+                <button onClick={() => setShowAddTask(false)} className="p-2 hover:bg-zinc-100 rounded-full transition-colors">
                   <X className="w-5 h-5 text-zinc-400" />
                 </button>
               </div>
               <div className="p-8">
-                <TaskForm task={editingTask || undefined} onClose={() => { setShowForm(false); setEditingTask(null); }} />
+                <TaskForm onClose={() => setShowAddTask(false)} />
               </div>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
 
-      {/* Quick Add FAB (Mobile) */}
-      <button 
-        onClick={() => setShowForm(true)}
-        className="fixed bottom-6 right-6 sm:hidden w-14 h-14 bg-zinc-900 text-white rounded-full shadow-lg shadow-zinc-900/30 flex items-center justify-center active:scale-95 transition-transform z-40"
-      >
-        <Plus className="w-6 h-6" />
-      </button>
+      <AnimatePresence>
+        {showOnboarding && (
+          <OnboardingModal
+            onClose={() => {
+              localStorage.setItem('tasky-onboarded', 'true');
+              setShowOnboarding(false);
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
